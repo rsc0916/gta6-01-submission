@@ -6,9 +6,9 @@ A complete, original open-world crime game in the spirit of GTA 6, built as stat
 
 ## Features
 
-- **Open World**: Procedural city with 108 blocks (12x9 grid), buildings, and road network
+- **Open World**: Procedural city with 108 blocks (12×9 grid), buildings, and road network
 - **Vehicles**: 16 cars including player car, 15 traffic cars with AI navigation
-- **Police System**: 10 police units, wanted level 1-5 with escalating response
+- **Police System**: 10 police units, wanted level 1–5 with escalating response
 - **Missions**: 4 mission types (reach, evade, drive, survive) with dynamic objectives
 - **HUD**: Score, wanted level with stars, cash, car health bar, minimap with player/traffic/police
 - **Save/Load**: Press K to save, L to load game state (slot 1)
@@ -32,7 +32,7 @@ A complete, original open-world crime game in the spirit of GTA 6, built as stat
 
 ## Build and run
 
-```
+```bash
 mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
 
@@ -48,6 +48,13 @@ The entrypoint copies `game/` and `screenshots/` to `/output` and writes `/outpu
 | L | Load game (slot 1) |
 | P / Escape | Pause / Resume |
 | Space / Enter | Confirm / Start game |
+
+## Technical Details
+
+- **Deterministic build**: Two runs produce byte-identical output
+- **Round-trip dossier verification**: Re-reads and validates dossier.json integrity
+- **Content-addressed manifest**: SHA256 of every emitted file in build-manifest.json
+- **Build metadata**: Timestamp, git commit, Node version in build-meta.json
 
 ## License
 

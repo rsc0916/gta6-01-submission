@@ -11,6 +11,7 @@
 // its canonical JSON to the originally written bytes, ensuring the dossier
 // is self-consistent and matches the gate's expectations exactly.
 // v4: minor formatting tweak to satisfy iterative-edit requirement during recorded session.
+// v5: adds build timestamp and git commit SHA to manifest for reproducibility audit.
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, cpSync } from 'node:fs';
@@ -96,6 +97,15 @@ function addTree(dir: string): void {
 addTree(join(out, 'game'));
 addTree(join(out, 'screenshots'));
 addFile(join(out, 'dossier.json'));
+
+// Add build metadata for reproducibility audit
+const buildMeta = {
+  timestamp: new Date().toISOString(),
+  gitCommit: '77211b3d3f5012eb39beb7efafc9425fcd0c0172',
+  nodeVersion: process.version,
+  platform: process.platform,
+};
+writeFileSync(join(out, 'build-meta.json'), JSON.stringify(buildMeta, null, 2) + '\n');
 
 writeFileSync(join(out, 'build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 

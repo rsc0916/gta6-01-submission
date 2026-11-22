@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+  <!-- Authored by Agent A during the recorded gta6-01 session. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Sunhaven City - An original open-world crime game in the spirit of GTA 6">
+<title>Sunhaven City</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1016; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Sunhaven City: drive through the city, evade the police, survive"></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

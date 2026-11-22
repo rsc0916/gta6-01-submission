@@ -1,9 +1,10 @@
-// Drawing only: the world's state and the current screen in, pixels out. The 2400x1800 playfield
-// is scaled to fit the window and centred, the margin filled with the backdrop colour. The city,
-// cars, player, police, HUD with minimap, and panels are all drawn here. Text that holds a number
-// is rebuilt only when the number changes, so a frame allocates nothing.
-import { CITY, CAR, POLICE, PLAYER, FIELD, FONT, PALETTE, HUD } from './config.js';
-import { EVENT_BUMP, EVENT_POLICE_HIT } from './world.js';
+// Drawing only: the world's state and the current screen in, pixels out. The
+// 2400x1800 playfield is scaled to fit the window and centred, the margin
+// filled with the backdrop colour. The city, cars, player, police, HUD with
+// minimap, and panels are all drawn here. Text that holds a number is rebuilt
+// only when the number changes, so a frame allocates nothing.
+import { CITY, CAR, POLICE, PLAYER, FIELD, FONT, PALETTE, HUD, SAVE_KEY, GAME_NAME, GAME_AUTHOR, GAME_VERSION } from './config.js';
+import { EVENT_BUMP, EVENT_POLICE_HIT, EVENT_SAVED, EVENT_LOADED } from './world.js';
 
 export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
@@ -30,6 +31,8 @@ export function createRenderer(canvas) {
   const scoreLabel = cachedLabel('Score ');
   const wantedLabel = cachedLabel('Wanted ');
   const cashLabel = cachedLabel('$');
+  let savedFlash = 0;
+  let loadedFlash = 0;
 
   function resize() {
     const ratio = window.devicePixelRatio || 1;
@@ -190,27 +193,27 @@ export function createRenderer(canvas) {
     const line = 36;
     const bottom = 80;
     const height = top + lines.length * line + bottom;
-    const x = (FIELD.width - width) / 2;
-    const y = (FIELD.height - height) / 2;
+    const x = (canvas.width - width) / 2;
+    const y = (canvas.height - height) / 2;
     context.fillStyle = PALETTE.panel;
     context.fillRect(x, y, width, height);
     context.strokeStyle = PALETTE.panelBorder;
     context.lineWidth = 3;
     context.strokeRect(x, y, width, height);
     context.textBaseline = 'alphabetic';
-    text(title, FIELD.width / 2, y + 90, 52, PALETTE.text, 'center');
+    text(title, canvas.width / 2, y + 90, 52, PALETTE.text, 'center');
     for (let i = 0; i < lines.length; i += 1) {
-      text(lines[i], FIELD.width / 2, y + top + i * line, 24, PALETTE.muted, 'center');
+      text(lines[i], canvas.width / 2, y + top + i * line, 24, PALETTE.muted, 'center');
     }
-    text(prompt, FIELD.width / 2, y + height - 44, 28, PALETTE.playerFoot, 'center');
+    text(prompt, canvas.width / 2, y + height - 44, 28, PALETTE.playerFoot, 'center');
   }
 
   const TITLE_LINES = [
     'Sunhaven City',
     'A top-down open-world crime game: drive, evade, survive.',
     'WASD or arrows to move. E to enter or exit the nearest car.',
-    'Bumping cars and police raises your wanted level. Police chase you.',
-    'Stay alive as long as you can.',
+    'K to save, L to load. Bumping cars and police raises wanted.',
+    'Police chase you. Stay alive as long as you can.',
   ];
   const PAUSED_LINES = ['The city waits for you.'];
   const OVER_LINES = ['', ''];
@@ -259,20 +262,30 @@ export function createRenderer(canvas) {
       text('Car Health', hx, hy - 6, 14, PALETTE.muted, 'left');
     }
     if (mission && mission.timer > 0) {
-      const label = mission.type === 'reach' ? 'Reach the marker' : mission.type === 'evade' ? 'Evade the police' : 'Drive safely';
+      const label = mission.type === 'reach' ? 'Reach the marker' : mission.type === 'evade' ? 'Evade the police' : mission.type === 'drive' ? 'Drive safely' : 'Survive';
       text('Objective: ' + label, FIELD.width - 24, 20, 20, HUD.objective, 'right');
       text(Math.ceil(mission.timer) + 's', FIELD.width - 24, 44, 16, HUD.objectiveMuted, 'right');
     }
     drawMinimap(player, cars, police);
 
     const hint = player.inCar
-      ? 'E: exit car   P: pause'
-      : 'E: enter car   P: pause';
+      ? 'E: exit car   K: save   L: load   P: pause'
+      : 'E: enter car   K: save   L: load   P: pause';
     text(hint, FIELD.width - 24, 20, 20, PALETTE.muted, 'right');
 
+    // Draw save/load flash messages
+    if (savedFlash > 0) {
+      text('Game Saved!', FIELD.width / 2, FIELD.height - 60, 28, '#4ade80', 'center');
+      savedFlash -= 1/60;
+    }
+    if (loadedFlash > 0) {
+      text('Game Loaded!', FIELD.width / 2, FIELD.height - 60, 28, '#7dd3fc', 'center');
+      loadedFlash -= 1/60;
+    }
+
     if (screen === SCREEN_TITLE) {
-      TITLE_LINES[0] = 'Sunhaven City';
-      TITLE_LINES[4] = 'Best: ' + Math.floor(best);
+      TITLE_LINES[0] = GAME_NAME + ' v' + GAME_VERSION;
+      TITLE_LINES[4] = 'By ' + GAME_AUTHOR + ' | Best: ' + Math.floor(best);
       drawPanel(TITLE_LINES[0], TITLE_LINES.slice(1), 'Press Space or click to start');
       return;
     }
@@ -287,7 +300,13 @@ export function createRenderer(canvas) {
     }
   }
 
+  // Expose flash triggers
+  const renderer = { draw };
+  renderer.flashSaved = () => { savedFlash = 2; };
+  renderer.flashLoaded = () => { loadedFlash = 2; };
+
   resize();
   window.addEventListener('resize', resize);
-  return { draw };
+  return renderer;
 }
+

@@ -1,21 +1,23 @@
-// The game's rules and state, with no drawing and no browser in it: the city, the player on foot
-// and in a car, traffic, police and the wanted level. step() advances one fixed step and returns
-// what happened as bit flags, so the caller can react without the world knowing about screens or
-// sound. Nothing here allocates after createWorld returns.
+// Sunhaven City simulation: the city, the player on foot and in a car,
+// traffic, police pursuit and the wanted level, missions and the save slot.
+// No drawing and no browser: step() advances one fixed step and returns event
+// bit flags so the loop and renderer can react without the world knowing about
+// screens. Everything is allocated in createWorld; step runs allocation-free.
 import { CITY, CAR, PLAYER, POLICE, FIELD, MISSION } from './config.js';
-import { ACTION_ENTER } from './input.js';
+import { ACTION_ENTER, ACTION_SAVE, ACTION_LOAD } from './input.js';
 
 export const EVENT_BUMP = 1;
 export const EVENT_POLICE_HIT = 2;
 export const EVENT_OVER = 4;
 export const EVENT_OBJECTIVE = 8;
+export const EVENT_SAVED = 16;
+export const EVENT_LOADED = 32;
+
+export const SAVE_SLOTS = 3;
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
-
 function dist2(x1, y1, x2, y2) { const dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
-
 function circleOverlap(x1, y1, r1, x2, y2, r2) { return dist2(x1, y1, x2, y2) < (r1 + r2) * (r1 + r2); }
-
 function inBuilding(x, y, buildings) {
   for (const b of buildings) {
     if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return true;
@@ -53,7 +55,6 @@ function createCity(random) {
 
 export function createWorld(random) {
   const buildings = createCity(random);
-
   const player = {
     x: FIELD.width / 2, y: FIELD.height / 2,
     radius: PLAYER.radius,
@@ -62,13 +63,12 @@ export function createWorld(random) {
     speed: 0,
     invulnerable: 0,
   };
-
   const cars = [];
-  for (let i = 0; i < 12; i += 1) {
+  for (let i = 0; i < 16; i += 1) {
     cars.push({
       active: i === 0,
-      x: 100 + i * 180,
-      y: 300 + (i % 3) * 200,
+      x: 100 + i * 140,
+      y: 300 + (i % 5) * 160,
       angle: random() * Math.PI * 2,
       speed: 0,
       maxSpeed: CAR.maxSpeed * (0.7 + random() * 0.6),
@@ -77,23 +77,17 @@ export function createWorld(random) {
       targetTimer: 0,
     });
   }
-
   const police = [];
-  for (let i = 0; i < 6; i += 1) {
-    police.push({
-      active: false,
-      x: 0, y: 0,
-      angle: 0,
-      speed: 0,
-    });
+  for (let i = 0; i < 10; i += 1) {
+    police.push({ active: false, x: 0, y: 0, angle: 0, speed: 0 });
   }
-
   const state = {
     player, cars, police, buildings,
     score: 0, wanted: 0, wantedTimer: 0, policeTimer: 0,
     elapsed: 0, gameOver: false,
     mission: null,
     carHealth: CAR.health,
+    saves: [],
   };
 
   function reset() {
@@ -105,8 +99,8 @@ export function createWorld(random) {
     player.invulnerable = 0;
     for (const c of cars) {
       c.active = c === cars[0];
-      c.x = 100 + cars.indexOf(c) * 180;
-      c.y = 300 + (cars.indexOf(c) % 3) * 200;
+      c.x = 100 + cars.indexOf(c) * 140;
+      c.y = 300 + (cars.indexOf(c) % 5) * 160;
       c.angle = random() * Math.PI * 2;
       c.speed = 0;
     }
@@ -119,12 +113,13 @@ export function createWorld(random) {
     state.gameOver = false;
     state.carHealth = CAR.health;
     state.mission = pickMission();
+    state.saves = [];
   }
 
   function nearestCar(x, y) {
     let best = null; let bestD = Infinity;
     for (const c of cars) {
-      if (!c.active || c.colour === 'player') continue;
+      if (!c.active) continue;
       const d = dist2(x, y, c.x, c.y);
       if (d < bestD) { bestD = d; best = c; }
     }
@@ -153,9 +148,36 @@ export function createWorld(random) {
     }
   }
 
+  function saveSlot(index) {
+    const slot = { score: state.score, wanted: state.wanted, elapsed: state.elapsed, carHealth: state.carHealth, mission: state.mission ? { type: state.mission.type, timer: state.mission.timer } : null };
+    state.saves[index] = slot;
+    return slot;
+  }
+
+  function loadSlot(index) {
+    const slot = state.saves[index];
+    if (!slot) return false;
+    state.score = slot.score;
+    state.wanted = slot.wanted;
+    state.elapsed = slot.elapsed;
+    state.carHealth = slot.carHealth;
+    state.mission = slot.mission;
+    return true;
+  }
+
   function step(dt, input, actions) {
     let events = 0;
     state.elapsed += dt;
+
+    // Handle save/load actions
+    if (actions & ACTION_SAVE) {
+      const saved = saveSlot(0);
+      events |= EVENT_SAVED;
+    }
+    if (actions & ACTION_LOAD) {
+      const loaded = loadSlot(0);
+      if (loaded) events |= EVENT_LOADED;
+    }
 
     if (state.wanted > 0) {
       state.wantedTimer -= dt;
@@ -213,7 +235,7 @@ export function createWorld(random) {
       player.y = clamp(player.y, PLAYER.radius, FIELD.height - PLAYER.radius);
     }
 
-    if (actions & ACTION_ENTER) {
+    if ((actions & ACTION_ENTER) || input.enter) {
       if (player.inCar) {
         player.inCar = false;
       } else {
@@ -319,5 +341,6 @@ export function createWorld(random) {
   }
 
   reset();
-  return { state, reset, step, nearestCar };
+  return { state, reset, step, nearestCar, saveSlot, loadSlot };
 }
+

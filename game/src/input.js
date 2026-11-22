@@ -1,10 +1,12 @@
-// Keyboard and pointer input. Held keys give a movement direction; one-shot presses (start,
-// restart, pause, enter/exit car) are queued as bit flags and taken once by the loop, so a press
-// between two frames is never lost and never counted twice.
+// Keyboard and pointer input. Held keys yield a movement direction; one-shot
+// presses (confirm, pause, enter/exit car) are queued as bit flags and taken
+// once by the loop, so a press between two frames is never lost or doubled.
 
 export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;
 export const ACTION_ENTER = 4;
+export const ACTION_SAVE = 8;
+export const ACTION_LOAD = 16;
 
 const UP = new Set(['ArrowUp', 'KeyW']);
 const DOWN = new Set(['ArrowDown', 'KeyS']);
@@ -13,6 +15,8 @@ const RIGHT = new Set(['ArrowRight', 'KeyD']);
 const CONFIRM = new Set(['Space', 'Enter']);
 const PAUSE = new Set(['KeyP', 'Escape']);
 const ENTER = new Set(['KeyE']);
+const SAVE = new Set(['KeyK']);
+const LOAD = new Set(['KeyL']);
 
 export function createInput(target) {
   let up = false;
@@ -32,6 +36,10 @@ export function createInput(target) {
       if (!event.repeat) actions |= ACTION_PAUSE;
     } else if (ENTER.has(event.code)) {
       if (!event.repeat) actions |= ACTION_ENTER;
+    } else if (SAVE.has(event.code)) {
+      if (!event.repeat) actions |= ACTION_SAVE;
+    } else if (LOAD.has(event.code)) {
+      if (!event.repeat) actions |= ACTION_LOAD;
     } else return;
     event.preventDefault();
   });
@@ -58,3 +66,4 @@ export function createInput(target) {
     },
   };
 }
+

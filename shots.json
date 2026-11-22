@@ -1,5 +1,5 @@
 [
-  { "name": "1-start.png", "query": "?shot=start&seed=1" },
-  { "name": "2-play.png", "query": "?shot=play&seed=1" },
-  { "name": "3-end.png", "query": "?shot=end&seed=1" }
+  { "name": "1-start.png", "query": "?shot=start&seed=1", "description": "Title screen showing Sunhaven City" },
+  { "name": "2-play.png", "query": "?shot=play&seed=1", "description": "Gameplay: driving through the city with traffic" },
+  { "name": "3-end.png", "query": "?shot=end&seed=1", "description": "Extended play: police chase and wanted level" }
 ]

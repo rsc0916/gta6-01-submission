@@ -1,13 +1,16 @@
-// Boot and the one loop: input is read every frame, the world advances in fixed 1/60 s steps
-// (several in a slow frame, none in a fast one), and the renderer paints what is there. The game
-// moves between four screens: title, play, paused and game over.
+// Boot and the one loop: input is read every frame, the world advances in fixed
+// 1/60 s steps (several in a slow frame, none in a fast one), and the renderer
+// paints what is there. The game moves between four screens: title, play,
+// paused and game over. The best score persists to localStorage between visits.
+// The game also supports save/load slots (K/L) with visual feedback.
 //
-// ?seed=N fixes the city and traffic pattern. ?shot=start|play|end (with &seed=N) stages that scene
-// instead of running the loop, paints it twice and sets window.__shotReady for a screenshot.
+// ?seed=N fixes the city and traffic pattern. ?shot=start|play|end (with
+// &seed=N) stages that scene instead of running the loop, paints it twice and
+// sets window.__shotReady for a screenshot.
 import { STEP } from './config.js';
 import { createRandom } from './random.js';
 import { createWorld } from './world.js';
-import { createInput, ACTION_CONFIRM, ACTION_PAUSE, ACTION_ENTER } from './input.js';
+import { createInput, ACTION_CONFIRM, ACTION_PAUSE, ACTION_ENTER, ACTION_SAVE, ACTION_LOAD } from './input.js';
 import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
 import { stageShot } from './shots.js';
 
@@ -81,6 +84,8 @@ function runGame() {
   function step() {
     const actions = input.takeActions();
     const enter = (actions & ACTION_ENTER) !== 0;
+    const save = (actions & ACTION_SAVE) !== 0;
+    const load = (actions & ACTION_LOAD) !== 0;
 
     if (screen === SCREEN_TITLE) {
       if (actions & ACTION_CONFIRM) startGame();
@@ -100,9 +105,17 @@ function runGame() {
       return;
     }
     const dir = { hx: input.horizontal(), vy: input.vertical(), enter };
-    const events = world.step(STEP, dir);
+    const events = world.step(STEP, dir, actions);
     if (events & 4) endGame();
-    if (events & 8) announce('Objective reached! +' + world.state.score + ' pts.');
+    if (events & 8) announce('Objective reached! ' + Math.floor(world.state.score) + ' pts.');
+    if (events & 16) {
+      renderer.flashSaved();
+      announce('Game saved to slot 1.');
+    }
+    if (events & 32) {
+      renderer.flashLoaded();
+      announce('Game loaded from slot 1.');
+    }
   }
 
   function frame(now) {
@@ -127,7 +140,7 @@ function runGame() {
     }
   });
 
-  announce('Sunhaven City. Press Space or click to start.');
+  announce('Sunhaven City. Press Space to start.');
   requestAnimationFrame(frame);
 }
 

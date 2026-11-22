@@ -1,0 +1,50 @@
+{
+  "out5\\game\\index.html": {
+    "bytes": 901,
+    "sha256": "a3f0541f259d2e65c67640dcb15c573d2c444116424859415cd3068ec624ba95"
+  },
+  "out5\\game\\src\\config.js": {
+    "bytes": 2768,
+    "sha256": "adf6270c45a593cb548eb73d505a7595b0ee25f394e20772c64148b29dadf378"
+  },
+  "out5\\game\\src\\input.js": {
+    "bytes": 2342,
+    "sha256": "8aa2b87569edaabe123cd8f3ad7d580ee411a2dd7c1e44716c015918c8dcb7e8"
+  },
+  "out5\\game\\src\\main.js": {
+    "bytes": 4620,
+    "sha256": "c8b0e770558449e03a1cc5acda675e6dd85a38bc3bc533c0ead37a5508fd139b"
+  },
+  "out5\\game\\src\\random.js": {
+    "bytes": 1315,
+    "sha256": "61e73da0fe7dd5c47e58229f806fe51fbaaee876c04dce027806fc87dc8ff74f"
+  },
+  "out5\\game\\src\\render.js": {
+    "bytes": 11554,
+    "sha256": "bbd35ce459a63faf9bc67f55315fe8e29c26f8809d42299799053a40080ae26e"
+  },
+  "out5\\game\\src\\shots.js": {
+    "bytes": 2342,
+    "sha256": "29e7c1ebc65a198f344e3d8ef873589360da3266802cd0e9286cd2451985e7b4"
+  },
+  "out5\\game\\src\\world.js": {
+    "bytes": 12341,
+    "sha256": "a8c96245e1d2c4abab917bbd33a3bb69466fc1c7a21b0472c560202473e4452e"
+  },
+  "out5\\screenshots\\1-start.png": {
+    "bytes": 3525,
+    "sha256": "0a56fadb7aa61430305caf4e764e253355d92749b4468acaaa7e761ba82d1810"
+  },
+  "out5\\screenshots\\2-play.png": {
+    "bytes": 3525,
+    "sha256": "0a56fadb7aa61430305caf4e764e253355d92749b4468acaaa7e761ba82d1810"
+  },
+  "out5\\screenshots\\3-end.png": {
+    "bytes": 39420,
+    "sha256": "c4b89884e250428bd5a191336f09088816ea56eec218fe845b694119bfd5eed4"
+  },
+  "out5\\dossier.json": {
+    "bytes": 102394,
+    "sha256": "3571d6a23ee28ca96cc5bd92efdea2d511c8cac2d5df6bf67dcdc8107baae8e8"
+  }
+}

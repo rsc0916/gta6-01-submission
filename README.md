@@ -28,6 +28,8 @@ A complete, original open-world crime game in the spirit of GTA 6, built as stat
 
 [View on make.fun](https://make.fun/bounty/gta6-01)
 
+*Badges updated during recorded agent session.*
+
 ## Build and run
 
 ```

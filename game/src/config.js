@@ -35,6 +35,7 @@ export const CAR = {
   turnSpeed: 3.2,
   friction: 0.86,
   bumpDamage: 4,
+  health: 100,
 };
 
 /** Police. */
@@ -44,8 +45,33 @@ export const POLICE = {
   wantedPerPoliceHit: 2,
   decaySeconds: 8,
   spawnSeconds: 1.5,
-  speed: 460,
+  baseSpeed: 460,
   chaseRadius: 900,
+  /** Speed multiplier applied at each wanted level (1.0 = base, higher = more aggressive). */
+  speedByWanted: [1.00, 1.10, 1.25, 1.40, 1.55, 1.70],
+  /** Max police cars that can be active at each wanted level. */
+  maxByWanted: [0, 1, 2, 3, 4, 6],
+};
+
+/** Mission objectives shown to the player. */
+export const MISSION = {
+  /** How long an objective line stays on screen (seconds). */
+  displaySeconds: 8,
+  /** Score awarded for completing an objective. */
+  scorePerObjective: 500,
+  /** Distance within which an objective counts as reached. */
+  reachRadius: 90,
+  /** The pool of objective types. */
+  types: ['reach', 'evade', 'drive'],
+};
+
+/** Screen-space HUD text colours. */
+export const HUD = {
+  objective: '#7dd3fc',
+  objectiveMuted: '#9ca3af',
+  wanted: '#f87171',
+  score: '#f3f4f6',
+  cash: '#9ca3af',
 };
 
 /** Colours. */

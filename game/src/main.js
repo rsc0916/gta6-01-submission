@@ -10,6 +10,7 @@ import { createWorld } from './world.js';
 import { createInput, ACTION_CONFIRM, ACTION_PAUSE, ACTION_ENTER } from './input.js';
 import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
 import { stageShot } from './shots.js';
+import { EVENT_OBJECTIVE } from './world.js';
 
 /** The longest frame the loop catches up on; a longer stall (a hidden tab) is dropped, not replayed. */
 const MAX_FRAME = 0.25;
@@ -44,7 +45,7 @@ function runShot(name) {
   const scene = stageShot(name, world);
   let painted = 0;
   function paint() {
-    renderer.draw(world.state, scene.screen, scene.best);
+    renderer.draw(world.state, scene.screen, scene.best, world.state.mission);
     painted += 1;
     if (painted < 2) requestAnimationFrame(paint);
     else window.__shotReady = true;
@@ -106,6 +107,7 @@ function runGame() {
     const dir = { hx: input.horizontal(), vy: input.vertical(), enter };
     const events = world.step(STEP, dir);
     if (events & 4) endGame(); // EVENT_OVER
+    if (events & 8) announce('Objective reached! +' + world.state.score + ' pts.'); // EVENT_OBJECTIVE
   }
 
   function frame(now) {
@@ -120,7 +122,7 @@ function runGame() {
     } else {
       accumulator = 0;
     }
-    renderer.draw(world.state, screen, best);
+    renderer.draw(world.state, screen, best, world.state.mission);
   }
 
   // Leaving the tab pauses a running game rather than letting the city play unseen.

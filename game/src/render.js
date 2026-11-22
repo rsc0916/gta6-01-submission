@@ -2,7 +2,7 @@
 // is scaled to fit the window and centred, the margin filled with the backdrop colour. The city,
 // cars, player, police, HUD with minimap, and panels are all drawn here. Text that holds a number
 // is rebuilt only when the number changes, so a frame allocates nothing.
-import { CITY, CAR, POLICE, PLAYER, FIELD, FONT, PALETTE } from './config.js';
+import { CITY, CAR, POLICE, PLAYER, FIELD, FONT, PALETTE, HUD } from './config.js';
 import { EVENT_BUMP, EVENT_POLICE_HIT } from './world.js';
 
 export const SCREEN_TITLE = 'title';
@@ -216,7 +216,7 @@ export function createRenderer(canvas) {
   const OVER_LINES = ['', ''];
 
   /** Paint one frame: the city, actors, HUD, and a panel for the screen the game is on. */
-  function draw(state, screen, best) {
+  function draw(state, screen, best, mission) {
     const { player, cars, police, buildings } = state;
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.fillStyle = PALETTE.backdrop;
@@ -245,6 +245,27 @@ export function createRenderer(canvas) {
     text(wantedLabel(state.wanted), FIELD.width / 2 - 60, 20, 28, state.wanted > 0 ? PALETTE.wanted : PALETTE.muted, 'left');
     drawWantedStars(state.wanted);
     text(cashLabel(Math.floor(state.score / 10)), 24, 56, 22, PALETTE.muted, 'left');
+    // Car health bar (only when in a car).
+    if (player.inCar) {
+      const healthW = 120;
+      const healthH = 10;
+      const hx = 24;
+      const hy = 86;
+      context.fillStyle = '#1f2937';
+      context.fillRect(hx, hy, healthW, healthH);
+      context.fillStyle = state.carHealth > 50 ? '#4ade80' : state.carHealth > 25 ? '#fbbf24' : '#ef4444';
+      context.fillRect(hx, hy, Math.round((state.carHealth / CAR.health) * healthW), healthH);
+      context.strokeStyle = '#374151';
+      context.lineWidth = 1;
+      context.strokeRect(hx, hy, healthW, healthH);
+      text('Car Health', hx, hy - 6, 14, PALETTE.muted, 'left');
+    }
+    // Mission objective.
+    if (mission && mission.timer > 0) {
+      const label = mission.type === 'reach' ? 'Reach the marker' : mission.type === 'evade' ? 'Evade the police' : 'Drive safely';
+      text('Objective: ' + label, FIELD.width - 24, 20, 20, HUD.objective, 'right');
+      text(Math.ceil(mission.timer) + 's', FIELD.width - 24, 44, 16, HUD.objectiveMuted, 'right');
+    }
     drawMinimap(player, cars, police);
 
     const hint = player.inCar

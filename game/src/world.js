@@ -2,12 +2,13 @@
 // and in a car, traffic, police and the wanted level. step() advances one fixed step and returns
 // what happened as bit flags, so the caller can react without the world knowing about screens or
 // sound. Nothing here allocates after createWorld returns.
-import { CITY, CAR, PLAYER, POLICE, FIELD } from './config.js';
+import { CITY, CAR, PLAYER, POLICE, FIELD, MISSION } from './config.js';
 import { ACTION_ENTER } from './input.js';
 
 export const EVENT_BUMP = 1;
 export const EVENT_POLICE_HIT = 2;
 export const EVENT_OVER = 4;
+export const EVENT_OBJECTIVE = 8;
 
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
@@ -98,6 +99,10 @@ export function createWorld(random) {
     player, cars, police, buildings,
     score: 0, wanted: 0, wantedTimer: 0, policeTimer: 0,
     elapsed: 0, gameOver: false,
+    /** Current mission objective: { type, targetX, targetY, timer, reached }. */
+    mission: null,
+    /** Player's car health (0 = destroyed). */
+    carHealth: CAR.health,
   };
 
   function reset() {
@@ -121,6 +126,8 @@ export function createWorld(random) {
     state.policeTimer = 0;
     state.elapsed = 0;
     state.gameOver = false;
+    state.carHealth = CAR.health;
+    state.mission = pickMission();
   }
 
   function nearestCar(x, y) {
@@ -131,6 +138,15 @@ export function createWorld(random) {
       if (d < bestD) { bestD = d; best = c; }
     }
     return bestD < PLAYER.enterRadius * PLAYER.enterRadius ? best : null;
+  }
+
+  /** Pick a fresh random mission objective for the player. */
+  function pickMission() {
+    const types = MISSION.types;
+    const type = types[Math.floor(random() * types.length)];
+    const targetX = 100 + random() * (FIELD.width - 200);
+    const targetY = 100 + random() * (FIELD.height - 200);
+    return { type, targetX, targetY, timer: MISSION.displaySeconds, reached: false };
   }
 
   function spawnPolice() {
@@ -164,7 +180,7 @@ export function createWorld(random) {
 
     // Police spawn when wanted.
     state.policeTimer -= dt;
-    const maxPolice = Math.min(6, 1 + state.wanted);
+    const maxPolice = POLICE.maxByWanted[Math.min(state.wanted, POLICE.maxWanted)];
     let activePolice = 0;
     for (const p of police) if (p.active) activePolice += 1;
     if (state.wanted > 0 && activePolice < maxPolice && state.policeTimer <= 0) {
@@ -199,6 +215,7 @@ export function createWorld(random) {
         car.angle += Math.PI * 0.5 + random() * 0.5;
         car.speed *= 0.3;
         events |= EVENT_BUMP;
+        state.carHealth = Math.max(0, state.carHealth - 10);
         state.wanted = Math.min(POLICE.maxWanted, state.wanted + POLICE.wantedPerBump);
         state.wantedTimer = POLICE.decaySeconds;
       }
@@ -266,6 +283,7 @@ export function createWorld(random) {
       // Traffic vs player car: bump.
       if (player.inCar && circleOverlap(c.x, c.y, 20, cars[0].x, cars[0].y, 20)) {
         events |= EVENT_BUMP;
+        state.carHealth = Math.max(0, state.carHealth - 5);
         state.wanted = Math.min(POLICE.maxWanted, state.wanted + POLICE.wantedPerBump);
         state.wantedTimer = POLICE.decaySeconds;
         c.x -= Math.cos(c.angle) * c.speed * dt * 0.5;
@@ -279,7 +297,7 @@ export function createWorld(random) {
       const dx = player.x - p.x, dy = player.y - p.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       p.angle = Math.atan2(dy, dx);
-      p.speed = POLICE.speed;
+      p.speed = POLICE.baseSpeed * POLICE.speedByWanted[Math.min(state.wanted, POLICE.maxWanted)];
       p.x += Math.cos(p.angle) * p.speed * dt;
       p.y += Math.sin(p.angle) * p.speed * dt;
       // Police vs player car: hit.
@@ -299,6 +317,30 @@ export function createWorld(random) {
         p.x -= Math.cos(p.angle) * p.speed * dt;
         p.y -= Math.sin(p.angle) * p.speed * dt;
       }
+    }
+
+    // --- Mission objectives ---
+    if (state.mission) {
+      state.mission.timer -= dt;
+      const m = state.mission;
+      if (!m.reached) {
+        const dx = player.x - m.targetX, dy = player.y - m.targetY;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        if (dist < MISSION.reachRadius) {
+          m.reached = true;
+          state.score += MISSION.scorePerObjective;
+          events |= EVENT_OBJECTIVE;
+        }
+      }
+      if (m.timer <= 0 || m.reached) {
+        state.mission = pickMission();
+      }
+    }
+
+    // Car destroyed by damage.
+    if (state.carHealth <= 0) {
+      state.gameOver = true;
+      events |= EVENT_OVER;
     }
 
     // Score: stay alive, driving scores more.

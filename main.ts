@@ -12,6 +12,13 @@
 // is self-consistent and matches the gate's expectations exactly.
 // v4: minor formatting tweak to satisfy iterative-edit requirement during recorded session.
 // v5: adds build timestamp and git commit SHA to manifest for reproducibility audit.
+// v6: honors MAKEFUN_BUILD_TIMESTAMP so the build timestamp is reproducible across runs.
+// v7: adds a build summary (file count, total bytes, manifest sha256) and re-verifies
+//     build-manifest.json against the files on disk before finishing.
+// v8: emits manifest entries in sorted path order so build-manifest.json is
+//     byte-identical across runs regardless of filesystem entry order.
+// v9: includes build-meta.json in the content-addressed manifest so every
+//     emitted artifact except the manifest itself is integrity-covered.
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, cpSync } from 'node:fs';
@@ -89,7 +96,10 @@ function addFile(file: string): void {
   manifest[file] = { bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 function addTree(dir: string): void {
-  for (const name of readdirSync(dir, { recursive: true })) {
+  // Sort entries so the manifest is emitted in deterministic path order
+  // regardless of the OS/filesystem readdir ordering — keeps builds
+  // byte-identical across runs and platforms.
+  for (const name of readdirSync(dir, { recursive: true }).sort()) {
     const file = join(dir, name);
     if (statSync(file).isFile()) addFile(file);
   }
@@ -99,14 +109,43 @@ addTree(join(out, 'screenshots'));
 addFile(join(out, 'dossier.json'));
 
 // Add build metadata for reproducibility audit
+// Build metadata for reproducibility audit. The timestamp honors MAKEFUN_BUILD_TIMESTAMP
+// (ISO-8601): two runs with the same value write byte-identical build-meta.json. When the
+// variable is unset, the current time is used as before.
 const buildMeta = {
-  timestamp: new Date().toISOString(),
+  timestamp: process.env.MAKEFUN_BUILD_TIMESTAMP ?? new Date().toISOString(),
   gitCommit: '77211b3d3f5012eb39beb7efafc9425fcd0c0172',
   nodeVersion: process.version,
   platform: process.platform,
 };
 writeFileSync(join(out, 'build-meta.json'), JSON.stringify(buildMeta, null, 2) + '\n');
 
+// Include build-meta.json in the content-addressed manifest so the hand-in's
+// integrity audit covers every emitted artifact except the manifest itself.
+addFile(join(out, 'build-meta.json'));
+
 writeFileSync(join(out, 'build-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 
+// Build summary: report the hand-in's footprint and self-verify build-manifest.json by
+// re-reading it and re-checking every recorded sha256 against the file on disk, so a
+// corrupted manifest cannot ship unnoticed.
+const manifestBytes = new Uint8Array(readFileSync(join(out, 'build-manifest.json')));
+const manifestSha = createHash('sha256').update(manifestBytes).digest('hex');
+let totalBytes = 0;
+let fileCount = 0;
+for (const entry of Object.values(manifest)) {
+  fileCount++;
+  totalBytes += entry.bytes;
+}
+const parsed = JSON.parse(new TextDecoder().decode(manifestBytes)) as Record<string, { bytes: number; sha256: string }>;
+for (const [file, entry] of Object.entries(parsed)) {
+  const actual = new Uint8Array(readFileSync(file));
+  if (actual.length !== entry.bytes) {
+    throw new Error('gta6-01: manifest byte length mismatch for ' + file);
+  }
+  if (createHash('sha256').update(actual).digest('hex') !== entry.sha256) {
+    throw new Error('gta6-01: manifest sha256 mismatch for ' + file);
+  }
+}
+console.log('gta6-01: build summary -> ' + fileCount + ' files, ' + totalBytes + ' bytes, manifest sha256 ' + manifestSha);
 console.log('gta6-01: build complete -> ' + out);

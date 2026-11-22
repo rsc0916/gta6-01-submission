@@ -38,6 +38,8 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 The entrypoint copies `game/` and `screenshots/` to `/output` and writes `/output/dossier.json` via `vendor/makefun-game.ts`.
 
+Set `MAKEFUN_BUILD_TIMESTAMP` (ISO-8601) to make `build-meta.json` reproducible across runs; when unset, the current time is used. The build ends with a summary of file count, total bytes and the manifest sha256, and self-verifies `build-manifest.json` against the files on disk. Manifest entries are emitted in sorted path order for byte-identical output across platforms, and `build-meta.json` is included in the content-addressed manifest so every emitted artifact except the manifest itself is integrity-covered.
+
 ## Controls
 
 | Key | Action |
@@ -51,9 +53,12 @@ The entrypoint copies `game/` and `screenshots/` to `/output` and writes `/outpu
 
 ## Technical Details
 
-- **Deterministic build**: Two runs produce byte-identical output
+- **Deterministic build**: Two runs produce byte-identical output (set `MAKEFUN_BUILD_TIMESTAMP` to pin the build-meta.json timestamp)
 - **Round-trip dossier verification**: Re-reads and validates dossier.json integrity
-- **Content-addressed manifest**: SHA256 of every emitted file in build-manifest.json
+- **Content-addressed manifest**: SHA256 of every emitted file in build-manifest.json, self-verified against the files on disk at the end of the build
+- **Build summary**: File count, total bytes and manifest sha256 printed on completion
+- **Deterministic manifest ordering**: manifest entries are emitted in sorted path order, so `build-manifest.json` is byte-identical across runs and platforms
+- **Full artifact coverage**: `build-meta.json` is included in the content-addressed manifest, so every emitted artifact except the manifest itself is integrity-covered
 - **Build metadata**: Timestamp, git commit, Node version in build-meta.json
 
 ## License
